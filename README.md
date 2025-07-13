@@ -23,23 +23,23 @@ curl -s https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/firefox
 ```bash
  firefox-installer.sh [options]
 
-   --help                 |-h   display this help and exit
-   --firefox              |-f   latest
-   --esr                  |-e   esr
-   --beta                 |-b   beta
-   --nightly              |-n   nightly
-   --devedition           |-d   devedition
-   --repo                 |-r   install Mozilla APT repo (debian)
-   --language             |-l   install language pack (apt)
-   --apt                  |-a   select apt install mode
-   --source               |-s   select source install mode
-   --uninstall            |-u   uninstall firefox
-   
-   - To install firefox from apt, use -f and -a in combination.
-   - To uninstall use -f, -a and -u in combination.
+ --help                 |-h   display this help and exit
+ --firefox              |-f   latest
+ --esr                  |-e   esr
+ --beta                 |-b   beta
+ --nightly              |-n   nightly
+ --devedition           |-d   devedition
+ --repo                 |-r   install Mozilla APT repo (debian)
+ --language             |-l   install language pack (apt)
+ --apt                  |-a   select apt install mode
+ --mozilla-builds       |-m   select mozilla builds install mode
+ --uninstall            |-u   uninstall firefox
+ 
+ - To install firefox from apt, use -f and -a in combination.
+ - To uninstall use -f, -a and -u in combination.
 
-   - To install firefox from source, use -f and -s in combination.
-   - To uninstall use -f, -s and -u in combination.
+ - To install firefox from mozilla builds, use -f and -s in combination.
+ - To uninstall use -f, -s and -u in combination.
 ```
 
 ## Donations
