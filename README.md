@@ -8,16 +8,6 @@ curl -sSL https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/firef
 chmod +x firefox_installer.sh
 ```
 
-To install latest firefox directly on debian with apt:
-```bash
-curl -s https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/firefox_installer.sh | bash -s -f -a
-```
-
-To install latest firefox directly on debian from Mozilla builds:
-```bash
-curl -s https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/firefox_installer.sh | bash -s -f -s
-```
-
  ## Usage:
  
 ```bash
