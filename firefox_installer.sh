@@ -73,10 +73,10 @@ ARCH=$(uname -m)
 case "$ARCH" in
   x86_64)
     ARCH=linux64
-  ;;
+    ;;
   i686)
     ARCH=linux
-  ;;
+    ;;
 esac
 
 mozilla_url=https://download.mozilla.org
@@ -196,7 +196,7 @@ install_firefox_repo() {
 }
 
 install_firefox() {
-  if [ "$mode" != "uninstall" ]; then
+  if [ "$mode" != "uninstall" ] && [ "$mode" != "profile-backup" ]; then
     if [ "$mode" == "apt" ]; then
       if [ ! -f /etc/apt/sources.list.d/mozilla.list  ]; then
         install_firefox_repo
@@ -216,7 +216,7 @@ install_firefox() {
       selected_language="${language[$((selection-1))]}"
       FIREFOX_LANG=$(echo "$selected_language" | grep -o "lang=.*" | sed "s|lang=||g")
       language_selected=$(echo "$selected_language" | grep -o ".* lang=" | sed "s|lang=||g")
-      
+
       echo "You selected $language_selected"
       echo "Installing $FIREFOX_VER_NAME to $FIREFOX_INSTALL_DIR"
       firefox_url="$mozilla_url/?product=$FIREFOX_VER_NAME-latest-ssl&os=$ARCH&lang=$FIREFOX_LANG"
@@ -239,10 +239,10 @@ Type=Application
 Icon=/opt/$FIREFOX_VER_NAME/browser/chrome/icons/default/default128.png
 Categories=GNOME;GTK;Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
-StartupNotify=true" | sudo tee /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
+      StartupNotify=true" | sudo tee /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
       sudo rm "$FIREFOX_VER_NAME".tar.xz
       if [ $? -eq 0 ]; then
-          echo "Done."
+        echo "Done."
       else
         echo "Installing $FIREFOX_VER_NAME to $FIREFOX_INSTALL_DIR FAILED."
       fi
@@ -286,6 +286,75 @@ install_language() {
   fi
 }
 
+profile_backup() {
+  # From https://github.com/tmiland/Firefox-Backup
+  BACKUP_DEST=${BACKUP_DEST:-$HOME/.firefox-backup}
+
+  if [ ! -d "$BACKUP_DEST" ]; then
+    mkdir "$BACKUP_DEST"
+  fi
+
+  readIniFile () { # expects one argument: absolute path of profiles.ini
+    declare -r inifile="$1"
+    declare -r tfile=$(mktemp)
+
+    if [ $(grep '^\[Profile' "$inifile" | wc -l) == "1" ]; then ### only 1 profile found
+      grep '^\[Profile' -A 4 "$inifile" | grep -v '^\[Profile' > "$tfile"
+    else
+      grep -E -v '^\[General\]|^StartWithLastProfile=|^IsRelative=' "$inifile"
+      echo -e ""
+      read -p 'Select the profile number (0 for Profile0, 1 for Profile1, etc): ' -r
+      echo -e "\n"
+      if [[ $REPLY =~ ^(0|[1-9][0-9]*)$ ]]; then
+        grep '^\[Profile'${REPLY} -A 4 "$inifile" | grep -v '^\[Profile'${REPLY} > "$tfile"
+        if [[ "$?" != "0" ]]; then
+          echo -e "Profile${REPLY} does not exist!" && exit 1
+        fi
+      else
+        echo -e " Invalid selection!" && exit 1
+      fi
+    fi
+
+    declare -r profpath=$(grep '^Path=' "$tfile")
+    declare -r pathisrel=$(grep '^IsRelative=' "$tfile")
+    rm "$tfile"
+    # update global variable
+    if [[ ${pathisrel#*=} == "1" ]]; then
+      PROFILE_PATH="$(dirname "$inifile")/${profpath#*=}"
+      PROFILE_ID="${profpath#*=}"
+    else
+      PROFILE_PATH="${profpath#*=}"
+    fi
+  }
+
+  declare -r f1="$HOME/Library/Application Support/Firefox/profiles.ini"
+  declare -r f2="$HOME/.mozilla/firefox/profiles.ini"
+  local ini=''
+  if [[ -f "$f1" ]]; then
+    ini="$f1"
+  elif [[ -f "$f2" ]]; then
+    ini="$f2"
+  else
+    echo -e "Error: Sorry, -l is not supported for your OS"
+    exit 1
+  fi
+  readIniFile "$ini" # updates PROFILE_PATH or exits on error
+  echo ""
+  echo -e "Backing up firefox profile..."
+  BACKUP_FILE_NAME=${PROFILE_ID}-$(date +"%Y-%m-%d_%H%M").tar.gz
+  if [ -f "$HOME/.mozilla/firefox/installs.ini" ]; then
+    cp -rp "$HOME/.mozilla/firefox/installs.ini" "$PROFILE_PATH"/installs.ini.bak
+  fi
+  cp -rp "$ini" "$PROFILE_PATH"/profiles.ini.bak
+  tar -zcf "$BACKUP_FILE_NAME" "$PROFILE_PATH" > /dev/null 2>&1
+  mv "$BACKUP_FILE_NAME" "$BACKUP_DEST"
+  echo ""
+  echo -e "Done!"
+  echo ""
+  echo -e "Firefox profile successfully backed up to $BACKUP_DEST"
+  echo ""
+}
+
 usage() {
   #header
   ## shellcheck disable=SC2046
@@ -303,8 +372,9 @@ usage() {
   --language             |-l   install language pack (apt)
   --apt                  |-a   select apt install mode
   --mozilla-builds       |-m   select mozilla builds install mode
+  --backup-profile       |-bp  Backup firefox profile
   --uninstall            |-u   uninstall firefox
-  
+
   - To install firefox from apt, use -f and -a in combination.
   - To uninstall use -f, -a and -u in combination.
 
@@ -362,6 +432,11 @@ while [[ $# -gt 0 ]]; do
     --mozilla-builds | -m)
       shift
       mode="mozilla"
+      ;;
+    --backup-profile | -bp)
+      shift
+      profile_backup
+      mode="profile-backup"
       ;;
     --uninstall | -u)
       shift
