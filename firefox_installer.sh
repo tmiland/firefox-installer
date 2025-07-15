@@ -79,6 +79,30 @@ case "$ARCH" in
     ;;
 esac
 
+if [[ ! $(command -v curl) ]]
+then
+  if [[ $DISTRO == "Debian" ]]
+  then
+    sudo apt-get install curl
+  fi
+fi
+
+get_release() {
+  curl -sSL https://www.mozilla.org/en-US/firefox/"$1"/notes/
+}
+
+FIREFOX_VER=$(curl -sSL https://www.mozilla.org/en-US/firefox/notes/ | grep -Po 'span class="c-release-version">\K.*(?=</span)')
+FIREFOX_ESR_VER=$(get_release organizations | grep -Po 'span class="c-release-version">\K.*(?=</span)')
+FIREFOX_BETA_VER=$(curl -sSL https://download-installer.cdn.mozilla.net/pub/firefox/releases/ | grep -Po 'a href="/pub/firefox/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
+FIREFOX_NIGHTLY_VER=$(get_release nightly | grep -Po 'span class="c-release-version">\K.*(?=</span)')
+FIREFOX_DEV_VER=$(curl -sSL https://download-installer.cdn.mozilla.net/pub/devedition/releases/ | grep -Po 'a href="/pub/devedition/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
+
+FIREFOX_VER=${FIREFOX_VER:-$FIREFOX_VER}
+FIREFOX_ESR_VER=${FIREFOX_ESR_VER:-$FIREFOX_ESR_VER}
+FIREFOX_BETA_VER=${FIREFOX_BETA_VER:-$FIREFOX_BETA_VER}
+FIREFOX_NIGHTLY_VER=${FIREFOX_NIGHTLY_VER:-$FIREFOX_NIGHTLY_VER}
+FIREFOX_DEV_VER=${FIREFOX_DEV_VER:-$FIREFOX_DEV_VER}
+
 mozilla_url=https://download.mozilla.org
 
 lang_array=(
@@ -219,13 +243,45 @@ install_firefox() {
 
       echo "You selected $language_selected"
       echo "Installing $FIREFOX_VER_NAME to $FIREFOX_INSTALL_DIR"
-      firefox_url="$mozilla_url/?product=$FIREFOX_VER_NAME-latest-ssl&os=$ARCH&lang=$FIREFOX_LANG"
-      sudo apt-get install libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfontconfig1 libfreetype6 libgcc1 libgdk-pixbuf2.0-0 libgdk-pixbuf-2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb-shm0 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 >/dev/null 2>&1
+      if [[ "$version" == "custom" ]]; then
+        case "$FIREFOX_VER_NAME" in
+          firefox)
+            # firefox
+            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
+            ;;
+          firefox-esr)
+            # esr
+            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/"$FIREFOX_VERSION"esr/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION"esr.tar.xz
+            ;;
+          firefox-beta)
+            # beta
+            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
+            ;;
+          firefox-nightly)
+            # nightly
+            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/nightly/latest-mozilla-central/firefox-"$FIREFOX_VERSION"."$FIREFOX_LANG".linux-"$(uname -m)".tar.xz
+            ;;
+          firefox-devedition)
+            # Dev
+            firefox_url=https://download-installer.cdn.mozilla.net/pub/devedition/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
+            ;;
+        esac
+        #firefox_url="https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VER/linux-$ARCH/$FIREFOX_LANG/firefox-$FIREFOX_VER.tar.xz"
+      else
+        firefox_url="$mozilla_url/?product=$FIREFOX_VER_NAME-latest-ssl&os=$ARCH&lang=$FIREFOX_LANG"
+      fi
+      if [[ $DISTRO == "Debian" ]]
+      then
+        sudo apt-get -o Dpkg::Progress-Fancy="1" -y install menu libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfontconfig1 libfreetype6 libgcc1 libgdk-pixbuf2.0-0 libgdk-pixbuf-2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb-shm0 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1
+      fi
       cd /tmp || exit 0
       sudo wget -O "$FIREFOX_VER_NAME".tar.xz -q "$firefox_url"
       sudo tar -xf "$FIREFOX_VER_NAME".tar.xz
       sudo mv firefox "$FIREFOX_INSTALL_DIR"/"$FIREFOX_VER_NAME" >/dev/null 2>&1
       sudo ln -snf "$FIREFOX_INSTALL_DIR"/"$FIREFOX_VER_NAME"/firefox /usr/local/bin/"$FIREFOX_VER_NAME"
+      if [ ! -d /usr/local/share/applications ]; then
+        sudo mkdir /usr/local/share/applications
+      fi
       echo "[Desktop Entry]
 Version=1.0
 Name=Firefox Web Browser
@@ -240,6 +296,7 @@ Icon=/opt/$FIREFOX_VER_NAME/browser/chrome/icons/default/default128.png
 Categories=GNOME;GTK;Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
       StartupNotify=true" | sudo tee /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
+      sudo update-menus
       sudo rm "$FIREFOX_VER_NAME".tar.xz
       if [ $? -eq 0 ]; then
         echo "Done."
@@ -363,11 +420,11 @@ usage() {
   echo
   cat <<EOF
   --help                 |-h   display this help and exit
-  --firefox              |-f   latest
-  --esr                  |-e   esr
-  --beta                 |-b   beta
-  --nightly              |-n   nightly
-  --devedition           |-d   devedition
+  --firefox              |-f   latest (${FIREFOX_VER})
+  --esr                  |-e   esr (${FIREFOX_ESR_VER})
+  --beta                 |-b   beta (${FIREFOX_BETA_VER})
+  --nightly              |-n   nightly (${FIREFOX_NIGHTLY_VER})
+  --devedition           |-d   devedition (${FIREFOX_DEV_VER})
   --repo                 |-r   install Mozilla APT repo (debian)
   --language             |-l   install language pack (apt)
   --apt                  |-a   select apt install mode
@@ -394,28 +451,33 @@ while [[ $# -gt 0 ]]; do
       ;;
     --firefox | -f)
       shift
-      # FIREFOX_VER=$STABLE_VER
+      FIREFOX_VERSION=$FIREFOX_VER
       FIREFOX_VER_NAME=firefox
       ;;
     --esr | -e)
       shift
-      # FIREFOX_VER=$MAINLINE_VER
+      FIREFOX_VERSION=$FIREFOX_ESR_VER
       FIREFOX_VER_NAME=firefox-esr
       ;;
     --beta | -b)
       shift
-      # FIREFOX_VER="$2"
+      FIREFOX_VERSION=$FIREFOX_BETA_VER
       FIREFOX_VER_NAME=firefox-beta
       ;;
     --nightly | -n)
       shift
-      # FIREFOX_VER="$2"
+      FIREFOX_VERSION=$FIREFOX_NIGHTLY_VER
       FIREFOX_VER_NAME=firefox-nightly
       ;;
     --devedition | -d)
       shift
-      # FIREFOX_VER="$2"
+      FIREFOX_VERSION=$FIREFOX_DEV_VER
       FIREFOX_VER_NAME=firefox-devedition
+      ;;
+    --version | -v)
+      shift
+      version="custom"
+      FIREFOX_VERSION="$1"
       ;;
     --repo | -r)
       shift
