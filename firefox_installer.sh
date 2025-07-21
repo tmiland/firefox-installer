@@ -50,9 +50,13 @@ fi
 # Get script filename
 self=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_FILENAME=$(basename "$self")
+# Set default keyrings folder
 keyrings=/etc/apt/keyrings
+# Set default firefox version
 FIREFOX_VER_NAME=${FIREFOX_VER_NAME:-firefox}
+# Set default language
 FIREFOX_LANG=${FIREFOX_LANG:-en-US}
+# Set default install dir
 FIREFOX_INSTALL_DIR=/opt
 
 shopt -s nocasematch
@@ -96,7 +100,7 @@ FIREFOX_ESR_VER=$(get_release organizations | grep -Po 'span class="c-release-ve
 FIREFOX_BETA_VER=$(curl -sSL https://download-installer.cdn.mozilla.net/pub/firefox/releases/ | grep -Po 'a href="/pub/firefox/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
 FIREFOX_NIGHTLY_VER=$(get_release nightly | grep -Po 'span class="c-release-version">\K.*(?=</span)')
 FIREFOX_DEV_VER=$(curl -sSL https://download-installer.cdn.mozilla.net/pub/devedition/releases/ | grep -Po 'a href="/pub/devedition/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
-
+# Set default firefox versions
 FIREFOX_VER=${FIREFOX_VER:-$FIREFOX_VER}
 FIREFOX_ESR_VER=${FIREFOX_ESR_VER:-$FIREFOX_ESR_VER}
 FIREFOX_BETA_VER=${FIREFOX_BETA_VER:-$FIREFOX_BETA_VER}
@@ -266,7 +270,6 @@ install_firefox() {
             firefox_url=https://download-installer.cdn.mozilla.net/pub/devedition/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
             ;;
         esac
-        #firefox_url="https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VER/linux-$ARCH/$FIREFOX_LANG/firefox-$FIREFOX_VER.tar.xz"
       else
         firefox_url="$mozilla_url/?product=$FIREFOX_VER_NAME-latest-ssl&os=$ARCH&lang=$FIREFOX_LANG"
       fi
