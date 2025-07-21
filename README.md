@@ -11,7 +11,7 @@ chmod +x firefox_installer.sh
  ## Usage:
  
 ```bash
- firefox-installer.sh [options]
+ firefox_installer.sh [options]
 
  --help                 |-h   display this help and exit
  --firefox              |-f   latest
