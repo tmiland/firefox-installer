@@ -8,6 +8,14 @@ curl -sSL https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/firef
 chmod +x firefox_installer.sh
 ```
 
+## Prerequisites
+
+ - curl (will be installed)
+ - packages that will be installed if using mozilla builds:
+```bash
+menu libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfontconfig1 libfreetype6 libgcc1 libgdk-pixbuf2.0-0 libgdk-pixbuf-2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb-shm0 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1
+```
+
  ## Usage:
  
 ```bash
