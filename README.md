@@ -19,17 +19,21 @@ chmod +x firefox_installer.sh
  --beta                 |-b   beta
  --nightly              |-n   nightly
  --devedition           |-d   devedition
+ --version              |-v   select custom version to install*
  --repo                 |-r   install Mozilla APT repo (debian)
  --language             |-l   install language pack (apt)
  --apt                  |-a   select apt install mode
  --mozilla-builds       |-m   select mozilla builds install mode
+ --backup-profile       |-bp  Backup firefox profile  
  --uninstall            |-u   uninstall firefox
  
- - To install firefox from apt, use -f and -a in combination.
- - To uninstall use -f, -a and -u in combination.
+ - To install firefox from apt, use -f and -a
+ - To uninstall use -f, -a and -u
 
- - To install firefox from mozilla builds, use -f and -s in combination.
- - To uninstall use -f, -s and -u in combination.
+ - To install firefox from mozilla builds, use -f and -s
+ - To uninstall use -f, -s and -u
+
+ *Custom version for mozilla builds only
 ```
 
 ## Donations
