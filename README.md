@@ -29,21 +29,18 @@ menu libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfon
  --beta                 |-b   beta
  --nightly              |-n   nightly
  --devedition           |-d   devedition
- --version              |-v   select custom version to install*
+ --release              |-rl  select custom release to install*
  --repo                 |-r   install Mozilla APT repo (debian)
  --language             |-l   install language pack (apt)
  --apt                  |-a   select apt install mode
  --mozilla-builds       |-m   select mozilla builds install mode
- --backup-profile       |-bp  Backup firefox profile  
+ --backup-profile       |-bp  backup firefox profile
  --uninstall            |-u   uninstall firefox
- 
- - To install firefox from apt, use -f and -a
- - To uninstall use -f, -a and -u
 
- - To install firefox from mozilla builds, use -f and -s
- - To uninstall use -f, -s and -u
-
- *Custom version for mozilla builds only
+ install from apt:            [-f|-e|-b|-n|-d] -a
+ install from mozilla builds: [-f|-e|-b|-n|-d] -m
+ uninstall:                   [-f|-e|-b|-n|-d], [-a|-m] -u
+ * custom release for mozilla builds only [-rl <release>]
 ```
 
 ## Donations
