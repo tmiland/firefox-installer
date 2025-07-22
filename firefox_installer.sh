@@ -265,7 +265,7 @@ install_firefox() {
       language_selected=$(echo "$selected_language" | grep -o ".* lang=" | sed "s|lang=||g")
 
       echo "You selected $language_selected"
-      if [[ "$version" == "custom" ]]
+      if [[ "$release" == "custom" ]]
       then
         case "$FIREFOX_VER_NAME" in
           firefox)
@@ -462,21 +462,18 @@ usage() {
   --beta                 |-b   beta (${FIREFOX_BETA_VER})
   --nightly              |-n   nightly (${FIREFOX_NIGHTLY_VER})
   --devedition           |-d   devedition (${FIREFOX_DEV_VER})
-  --version              |-v   select custom version to install*
+  --release              |-rl  select custom release to install*
   --repo                 |-r   install Mozilla APT repo (debian)
   --language             |-l   install language pack (apt)
   --apt                  |-a   select apt install mode
   --mozilla-builds       |-m   select mozilla builds install mode
-  --backup-profile       |-bp  Backup firefox profile
+  --backup-profile       |-bp  backup firefox profile
   --uninstall            |-u   uninstall firefox
 
-  - To install firefox from apt, use -f and -a
-  - To uninstall use -f, -a and -u
-
-  - To install firefox from mozilla builds, use -f and -s
-  - To uninstall use -f, -s and -u
-
-  *Custom version for mozilla builds only
+  install from apt:            [-f|-e|-b|-n|-d] -a
+  install from mozilla builds: [-f|-e|-b|-n|-d] -m
+  uninstall:                   [-f|-e|-b|-n|-d], [-a|-m] -u
+  * custom release for mozilla builds only [-rl <release>]
 EOF
   echo
 }
@@ -515,9 +512,9 @@ do
       FIREFOX_VERSION=$FIREFOX_DEV_VER
       FIREFOX_VER_NAME=firefox-devedition
       ;;
-    --version | -v)
+    --release | -rl)
       shift
-      version="custom"
+      release="custom"
       FIREFOX_VERSION="$1"
       ;;
     --repo | -r)
