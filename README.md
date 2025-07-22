@@ -1,6 +1,8 @@
 # Firefox Installer
  Install any version of firefox from Mozilla.org
 
+![firefox versions installed image](https://github.com/tmiland/Firefox-Installer/blob/main/img/firefox_versions_installed.png?raw=true)
+
 ## Installation
 
 ```bash
