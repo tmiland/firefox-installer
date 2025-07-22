@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2140,SC2206,SC2068,SC2181
+# shellcheck disable=SC2140,SC2206,SC2068,SC2181,SC2086
 
 ## Author: Tommy Miland (@tmiland) - Copyright (c) 2025
 
@@ -58,15 +58,31 @@ FIREFOX_VER_NAME=${FIREFOX_VER_NAME:-firefox}
 FIREFOX_LANG=${FIREFOX_LANG:-en-US}
 # Set default install dir
 FIREFOX_INSTALL_DIR=/opt
-
 shopt -s nocasematch
-if [[ -f /etc/debian_version ]]; then
-  DISTRO=Debian
+if lsb_release -si >/dev/null 2>&1; then
+  DISTRO=$(lsb_release -si)
+else
+  if [[ -f /etc/debian_version ]]; then
+    DISTRO=$(cat /etc/issue.net)
+  elif [[ -f /etc/redhat-release ]]; then
+    DISTRO=$(cat /etc/redhat-release)
+  elif [[ -f /etc/os-release ]]; then
+    DISTRO=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g' | awk '{print $1}')
+  fi
 fi
-
+case "$DISTRO" in
+  Debian*|Ubuntu*|LinuxMint*|PureOS*|Pop*|Devuan*)
+    DISTRO_GROUP=Debian
+    ;;
+esac
 shopt -s nocasematch
-if [[ $DISTRO == "Debian" ]]; then
+if [[ $DISTRO_GROUP == "Debian" ]]
+then
   export DEBIAN_FRONTEND=noninteractive
+  UPDATE="apt-get -o Dpkg::Progress-Fancy="1" update -qq"
+  INSTALL="apt-get -o Dpkg::Progress-Fancy="1" install -qq"
+  UNINSTALL="apt-get -o Dpkg::Progress-Fancy="1" remove -qq"
+  INSTALL_PKGS=("menu" "libasound2" "libatk1.0-0" "libc6" "libcairo-gobject2" "libcairo2" "libdbus-1-3" "libfontconfig1" "libfreetype6" "libgcc-s1" "libgdk-pixbuf2.0-0" "libgdk-pixbuf-2.0-0" "libglib2.0-0" "libgtk-3-0" "libpango-1.0-0" "libpangocairo-1.0-0" "libstdc++6" "libx11-6" "libx11-xcb1" "libxcb-shm0" "libxcb1" "libxcomposite1" "libxcursor1" "libxdamage1" "libxext6" "libxfixes3" "libxi6" "libxrandr2" "libxrender1")
 else
   echo -e "Error: Sorry, your OS is not supported."
   exit 1;
@@ -85,10 +101,7 @@ esac
 
 if [[ ! $(command -v curl) ]]
 then
-  if [[ $DISTRO == "Debian" ]]
-  then
-    sudo apt-get install curl
-  fi
+  sudo ${INSTALL} curl
 fi
 
 get_release() {
@@ -201,7 +214,8 @@ lang_array=(
 )
 
 install_firefox_repo() {
-  if [ ! -d $keyrings ]; then
+  if [ ! -d $keyrings ]
+  then
     sudo install -d -m 0755 $keyrings
   fi
   wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- |
@@ -224,19 +238,24 @@ install_firefox_repo() {
 }
 
 install_firefox() {
-  if [ "$mode" != "uninstall" ] && [ "$mode" != "profile-backup" ]; then
-    if [ "$mode" == "apt" ]; then
-      if [ ! -f /etc/apt/sources.list.d/mozilla.list  ]; then
+  if [ "$mode" != "uninstall" ] && [ "$mode" != "profile-backup" ]
+  then
+    if [ "$mode" == "apt" ]
+    then
+      if [ ! -f /etc/apt/sources.list.d/mozilla.list  ]
+      then
         install_firefox_repo
       fi
-      sudo apt-get -o Dpkg::Progress-Fancy="1" update &&
-      sudo apt-get -o Dpkg::Progress-Fancy="1" install "$FIREFOX_VER_NAME"
+      sudo ${UPDATE} &&
+      sudo ${INSTALL} "$FIREFOX_VER_NAME"
     fi
-    if [ "$mode" == "mozilla" ]; then
+    if [ "$mode" == "mozilla" ]
+    then
       language=("${lang_array[@]}")
       read -rp "$(
             f=0
-            for l in "${language[@]}" ; do
+            for l in "${language[@]}"
+            do
                     echo "$((++f)): $l"
             done
             echo -ne "Please select a language: "
@@ -246,8 +265,8 @@ install_firefox() {
       language_selected=$(echo "$selected_language" | grep -o ".* lang=" | sed "s|lang=||g")
 
       echo "You selected $language_selected"
-      echo "Installing $FIREFOX_VER_NAME to $FIREFOX_INSTALL_DIR"
-      if [[ "$version" == "custom" ]]; then
+      if [[ "$version" == "custom" ]]
+      then
         case "$FIREFOX_VER_NAME" in
           firefox)
             # firefox
@@ -273,35 +292,38 @@ install_firefox() {
       else
         firefox_url="$mozilla_url/?product=$FIREFOX_VER_NAME-latest-ssl&os=$ARCH&lang=$FIREFOX_LANG"
       fi
-      if [[ $DISTRO == "Debian" ]]
+      if [[ $DISTRO_GROUP == "Debian" ]]
       then
-        sudo apt-get -o Dpkg::Progress-Fancy="1" -y install menu libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfontconfig1 libfreetype6 libgcc1 libgdk-pixbuf2.0-0 libgdk-pixbuf-2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb-shm0 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1
+        echo -e "Checking Prerequisites"
+        for PKG in "${INSTALL_PKGS[@]}"
+        do
+          if ! dpkg-query -W --showformat='${Status}\n' "${PKG}" |
+          grep "install ok installed" >/dev/null 2>&1
+          then
+            echo "${PKG} is not installed, installing."
+            sudo ${INSTALL} "$PKG" 2> /dev/null
+          fi
+        done
+        echo -e "Done."
       fi
+      echo "Installing $FIREFOX_VER_NAME to $FIREFOX_INSTALL_DIR"
       cd /tmp || exit 0
       sudo wget -O "$FIREFOX_VER_NAME".tar.xz -q "$firefox_url"
       sudo tar -xf "$FIREFOX_VER_NAME".tar.xz
       sudo mv firefox "$FIREFOX_INSTALL_DIR"/"$FIREFOX_VER_NAME" >/dev/null 2>&1
       sudo ln -snf "$FIREFOX_INSTALL_DIR"/"$FIREFOX_VER_NAME"/firefox /usr/local/bin/"$FIREFOX_VER_NAME"
-      if [ ! -d /usr/local/share/applications ]; then
+      if [ ! -d /usr/local/share/applications ]
+      then
         sudo mkdir /usr/local/share/applications
       fi
-      echo "[Desktop Entry]
-Version=1.0
-Name=Firefox Web Browser
-Comment=Browse the World Wide Web
-GenericName=Web Browser
-Keywords=Internet;WWW;Browser;Web;Explorer
-Exec=firefox %u
-Terminal=false
-X-MultipleArgs=false
-Type=Application
-Icon=/opt/$FIREFOX_VER_NAME/browser/chrome/icons/default/default128.png
-Categories=GNOME;GTK;Network;WebBrowser;
-MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
-      StartupNotify=true" | sudo tee /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
+      # Download desktop shortcut from repo (borrowed from debian .deb packages)
+      curl -SsL https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/res/"$FIREFOX_VER_NAME".desktop |
+      sudo tee /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
+      sudo sed -i "s|Icon=$FIREFOX_VER_NAME|Icon=$FIREFOX_INSTALL_DIR/$FIREFOX_VER_NAME/browser/chrome/icons/default/default128.png|g" /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
       sudo update-menus
       sudo rm "$FIREFOX_VER_NAME".tar.xz
-      if [ $? -eq 0 ]; then
+      if [ $? -eq 0 ]
+      then
         echo "Done."
       else
         echo "Installing $FIREFOX_VER_NAME to $FIREFOX_INSTALL_DIR FAILED."
@@ -312,14 +334,16 @@ MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rs
 }
 
 uninstall_firefox() {
-  if [ "$mode" == "apt" ]; then
-    sudo apt-get -o Dpkg::Progress-Fancy="1" uninstall "$FIREFOX_VER_NAME"
+  if [ "$mode" == "apt" ]
+  then
+    sudo ${UNINSTALL} "$FIREFOX_VER_NAME"
     sudo rm /etc/apt/sources.list.d/mozilla.list
     sudo rm $keyrings/packages.mozilla.org.asc
     sudo rm /etc/apt/preferences.d/mozilla
-    sudo apt-get -o Dpkg::Progress-Fancy="1" update
+    sudo ${UPDATE}
   fi
-  if [ "$mode" == "mozilla" ]; then
+  if [ "$mode" == "mozilla" ]
+  then
     echo "Deleting files for $FIREFOX_VER_NAME"
     sudo rm /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop
     sudo rm /usr/local/bin/"$FIREFOX_VER_NAME"
@@ -329,13 +353,15 @@ uninstall_firefox() {
 }
 
 install_language() {
-  if [ "$mode" == "apt" ]; then
+  if [ "$mode" == "apt" ]
+  then
     language_array=$(apt-cache search firefox-l10n | sed "s|- Mozilla Firefox -.*||g")
     language=($language_array)
 
     read -rp "$(
           f=0
-          for d in ${language[@]} ; do
+          for d in ${language[@]}
+          do
                   echo "$((++f)): $d"
           done
           echo -ne "Please select a language : "
@@ -350,7 +376,8 @@ profile_backup() {
   # From https://github.com/tmiland/Firefox-Backup
   BACKUP_DEST=${BACKUP_DEST:-$HOME/.firefox-backup}
 
-  if [ ! -d "$BACKUP_DEST" ]; then
+  if [ ! -d "$BACKUP_DEST" ]
+  then
     mkdir "$BACKUP_DEST"
   fi
 
@@ -358,16 +385,19 @@ profile_backup() {
     declare -r inifile="$1"
     declare -r tfile=$(mktemp)
 
-    if [ $(grep '^\[Profile' "$inifile" | wc -l) == "1" ]; then ### only 1 profile found
+    if [ $(grep '^\[Profile' "$inifile" | wc -l) == "1" ]
+    then ### only 1 profile found
       grep '^\[Profile' -A 4 "$inifile" | grep -v '^\[Profile' > "$tfile"
     else
       grep -E -v '^\[General\]|^StartWithLastProfile=|^IsRelative=' "$inifile"
       echo -e ""
       read -p 'Select the profile number (0 for Profile0, 1 for Profile1, etc): ' -r
       echo -e "\n"
-      if [[ $REPLY =~ ^(0|[1-9][0-9]*)$ ]]; then
+      if [[ $REPLY =~ ^(0|[1-9][0-9]*)$ ]]
+      then
         grep '^\[Profile'${REPLY} -A 4 "$inifile" | grep -v '^\[Profile'${REPLY} > "$tfile"
-        if [[ "$?" != "0" ]]; then
+        if [[ "$?" != "0" ]]
+        then
           echo -e "Profile${REPLY} does not exist!" && exit 1
         fi
       else
@@ -379,7 +409,8 @@ profile_backup() {
     declare -r pathisrel=$(grep '^IsRelative=' "$tfile")
     rm "$tfile"
     # update global variable
-    if [[ ${pathisrel#*=} == "1" ]]; then
+    if [[ ${pathisrel#*=} == "1" ]]
+    then
       PROFILE_PATH="$(dirname "$inifile")/${profpath#*=}"
       PROFILE_ID="${profpath#*=}"
     else
@@ -390,9 +421,11 @@ profile_backup() {
   declare -r f1="$HOME/Library/Application Support/Firefox/profiles.ini"
   declare -r f2="$HOME/.mozilla/firefox/profiles.ini"
   local ini=''
-  if [[ -f "$f1" ]]; then
+  if [[ -f "$f1" ]]
+  then
     ini="$f1"
-  elif [[ -f "$f2" ]]; then
+  elif [[ -f "$f2" ]]
+  then
     ini="$f2"
   else
     echo -e "Error: Sorry, -l is not supported for your OS"
@@ -402,7 +435,8 @@ profile_backup() {
   echo ""
   echo -e "Backing up firefox profile..."
   BACKUP_FILE_NAME=${PROFILE_ID}-$(date +"%Y-%m-%d_%H%M").tar.gz
-  if [ -f "$HOME/.mozilla/firefox/installs.ini" ]; then
+  if [ -f "$HOME/.mozilla/firefox/installs.ini" ]
+  then
     cp -rp "$HOME/.mozilla/firefox/installs.ini" "$PROFILE_PATH"/installs.ini.bak
   fi
   cp -rp "$ini" "$PROFILE_PATH"/profiles.ini.bak
@@ -441,15 +475,16 @@ usage() {
 
   - To install firefox from mozilla builds, use -f and -s
   - To uninstall use -f, -s and -u
-  
-  *Custom version for mozilla builds only 
+
+  *Custom version for mozilla builds only
 EOF
   echo
 }
 
 POSITIONAL_ARGS=()
 
-while [[ $# -gt 0 ]]; do
+while [[ $# -gt 0 ]]
+do
   case $1 in
     --help | -h)
       usage
@@ -525,6 +560,7 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
-if ! install_firefox; then
+if ! install_firefox
+then
   echo "firefox installation returned an error."
 fi
