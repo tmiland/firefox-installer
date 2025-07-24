@@ -6,8 +6,10 @@
 ## Installation
 
 ```bash
-curl -sSL https://tmiland.github.io/Firefox-Installer/firefox_installer.sh > firefox_installer.sh && \
-chmod +x firefox_installer.sh
+curl -sSL https://tmiland.github.io/Firefox-Installer/firefox_installer.sh \
+     -o firefox_installer.sh && \
+     chmod +x firefox_installer.sh && \
+     ./firefox_installer.sh -h
 ```
 
 ## Prerequisites
