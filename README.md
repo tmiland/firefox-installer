@@ -6,7 +6,7 @@
 ## Installation
 
 ```bash
-curl -sSL https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/firefox_installer.sh > firefox_installer.sh && \
+curl -sSL https://tmiland.github.io/Firefox-Installer/firefox_installer.sh > firefox_installer.sh && \
 chmod +x firefox_installer.sh
 ```
 
@@ -52,6 +52,6 @@ menu libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfon
 
 ### License
 
-[![MIT License Image](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/220px-MIT_logo.svg.png)](https://github.com/tmiland/Firefox-Installer/blob/main/LICENSE)
+[![MIT License Image](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/220px-MIT_logo.svg.png)](https://tmiland.github.io/Firefox-Installer/blob/main/LICENSE)
 
-[MIT License](https://github.com/tmiland/Firefox-Installer/blob/main/LICENSE)
+[MIT License](https://tmiland.github.io/Firefox-Installer/blob/main/LICENSE)
