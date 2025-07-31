@@ -1,15 +1,23 @@
 # Firefox Installer
  Install any version of firefox from Mozilla.org
 
-![firefox versions installed image](https://github.com/tmiland/Firefox-Installer/blob/main/img/firefox_versions_installed.png?raw=true)
+![firefox versions installed image](https://github.com/tmiland/firefox-installer/blob/main/img/firefox_versions_installed.png?raw=true)
 
 ## Installation
 
 ```bash
-curl -sSL https://tmiland.github.io/Firefox-Installer/firefox_installer.sh \
+curl -sSL https://tmiland.github.io/firefox-installer/firefox_installer.sh \
      -o firefox_installer.sh && \
      chmod +x firefox_installer.sh && \
      ./firefox_installer.sh -h
+```
+
+### Install all versions from mozilla builds
+
+```bash
+for i in f e b n d; do
+  ./firefox_installer.sh -$i -m
+done
 ```
 
 ## Prerequisites
@@ -54,6 +62,6 @@ menu libasound2 libatk1.0-0 libc6 libcairo-gobject2 libcairo2 libdbus-1-3 libfon
 
 ### License
 
-[![MIT License Image](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/220px-MIT_logo.svg.png)](https://tmiland.github.io/Firefox-Installer/blob/main/LICENSE)
+[![MIT License Image](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/220px-MIT_logo.svg.png)](https://tmiland.github.io/firefox-installer/blob/main/LICENSE)
 
-[MIT License](https://tmiland.github.io/Firefox-Installer/blob/main/LICENSE)
+[MIT License](https://tmiland.github.io/firefox-installer/blob/main/LICENSE)
