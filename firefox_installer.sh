@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2140,SC2206,SC2068,SC2181,SC2086
+# shellcheck disable=SC2140,SC2206,SC2068,SC2181,SC2086,SC2034
 
 ## Author: Tommy Miland (@tmiland) - Copyright (c) 2025
 
@@ -11,7 +11,7 @@
 ####                   Maintained by @tmiland                     ####
 ######################################################################
 
-VERSION='1.0.0' # Must stay on line 14 for updater to fetch the numbers
+VERSION='1.0.1' # Must stay on line 14 for updater to fetch the numbers
 
 #------------------------------------------------------------------------------#
 #
@@ -317,7 +317,7 @@ install_firefox() {
         sudo mkdir /usr/local/share/applications
       fi
       # Download desktop shortcut from repo (borrowed from debian .deb packages)
-      curl -SsL https://github.com/tmiland/Firefox-Installer/raw/refs/heads/main/res/"$FIREFOX_VER_NAME".desktop |
+      curl -SsL https://github.com/tmiland/firefox-installer/raw/refs/heads/main/res/"$FIREFOX_VER_NAME".desktop |
       sudo tee /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
       sudo sed -i "s|Icon=$FIREFOX_VER_NAME|Icon=$FIREFOX_INSTALL_DIR/$FIREFOX_VER_NAME/browser/chrome/icons/default/default128.png|g" /usr/local/share/applications/"$FIREFOX_VER_NAME".desktop >/dev/null 2>&1
       sudo update-menus
