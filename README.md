@@ -3,6 +3,8 @@
 
 ![firefox versions installed image](https://github.com/tmiland/firefox-installer/blob/main/img/firefox_versions_installed.png?raw=true)
 
+Also check out [thunderbird-installer](https://github.com/tmiland/thunderbird-installer)
+
 ## Installation
 
 ```bash
