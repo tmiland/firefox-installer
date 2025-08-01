@@ -11,7 +11,7 @@
 ####                   Maintained by @tmiland                     ####
 ######################################################################
 
-VERSION='1.0.1' # Must stay on line 14 for updater to fetch the numbers
+VERSION='1.0.2'
 
 #------------------------------------------------------------------------------#
 #
@@ -38,7 +38,6 @@ VERSION='1.0.1' # Must stay on line 14 for updater to fetch the numbers
 # SOFTWARE.
 #
 #------------------------------------------------------------------------------#
-# Symlink: ln -sfn ~/.scripts/swa.sh ~/.local/bin/swa
 ## For debugging purpose
 if [[ $* =~ "debug" ]]
 then
@@ -489,33 +488,33 @@ do
       ;;
     --firefox | -f)
       shift
-      FIREFOX_VERSION=$FIREFOX_VER
+      FIREFOX_VERSION='1.0.2'
       FIREFOX_VER_NAME=firefox
       ;;
     --esr | -e)
       shift
-      FIREFOX_VERSION=$FIREFOX_ESR_VER
+      FIREFOX_VERSION='1.0.2'
       FIREFOX_VER_NAME=firefox-esr
       ;;
     --beta | -b)
       shift
-      FIREFOX_VERSION=$FIREFOX_BETA_VER
+      FIREFOX_VERSION='1.0.2'
       FIREFOX_VER_NAME=firefox-beta
       ;;
     --nightly | -n)
       shift
-      FIREFOX_VERSION=$FIREFOX_NIGHTLY_VER
+      FIREFOX_VERSION='1.0.2'
       FIREFOX_VER_NAME=firefox-nightly
       ;;
     --devedition | -d)
       shift
-      FIREFOX_VERSION=$FIREFOX_DEV_VER
+      FIREFOX_VERSION='1.0.2'
       FIREFOX_VER_NAME=firefox-devedition
       ;;
     --release | -rl)
       shift
       release="custom"
-      FIREFOX_VERSION="$1"
+      FIREFOX_VERSION='1.0.2'
       ;;
     --repo | -r)
       shift
