@@ -264,6 +264,30 @@ install_firefox() {
       language_selected=$(echo "$selected_language" | grep -o ".* lang=" | sed "s|lang=||g")
 
       echo "You selected $language_selected"
+
+      release_version_url=$(curl -sSL "https://download-installer.cdn.mozilla.net/pub/firefox/releases/" \
+      | grep -Po 'a href="/pub/firefox/releases/.*">\K.*(?=</a)' \
+      | grep -v "stub\|shiretoko\|sha1-installers\|partners\|namoroka\|latest*\|granp*\|devpre*\|deerpark\|custom-updates\|cdn_test\|bonecho" \
+      | sort -n \
+      | sed "s|\/||g" \
+      | sed 's/.*/"&"/') # wrap quotes around each line of text
+      # Source: https://www.baeldung.com/linux/bash-wrap-line-quotes  
+      release_version=(${release_version_url[@]})
+      read -rp "$(
+        f=0
+          for l in "${release_version[@]}"
+          do
+            echo "$((++f)): $l"
+          done
+        echo -ne "Please select a release version: "
+      )" selection
+      selected_release_version="${release_version[$((selection-1))]}"
+      FIREFOX_VERSION=$selected_release_version
+      
+      echo "You selected $FIREFOX_VERSION"
+      # Remove double quotes
+      FIREFOX_VERSION="${FIREFOX_VERSION//\"/}"
+      
       if [[ "$release" == "custom" ]]
       then
         case "$FIREFOX_VER_NAME" in
