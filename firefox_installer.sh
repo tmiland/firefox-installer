@@ -107,11 +107,13 @@ get_release() {
   curl -sSL https://www.mozilla.org/en-US/firefox/"$1"/notes/
 }
 
-FIREFOX_VER=$(curl -sSL https://www.mozilla.org/en-US/firefox/notes/ | grep -Po 'span class="c-release-version">\K.*(?=</span)')
-FIREFOX_ESR_VER=$(get_release organizations | grep -Po 'span class="c-release-version">\K.*(?=</span)')
-FIREFOX_BETA_VER=$(curl -sSL https://download-installer.cdn.mozilla.net/pub/firefox/releases/ | grep -Po 'a href="/pub/firefox/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
-FIREFOX_NIGHTLY_VER=$(get_release nightly | grep -Po 'span class="c-release-version">\K.*(?=</span)')
-FIREFOX_DEV_VER=$(curl -sSL https://download-installer.cdn.mozilla.net/pub/devedition/releases/ | grep -Po 'a href="/pub/devedition/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
+FIREFOX_INSTALLER_URL=https://download-installer.cdn.mozilla.net/pub
+
+FIREFOX_VER=$(curl -sSL https://www.mozilla.org/en-US/firefox/notes/ | grep -Po 'span class="c-release-version.*">\K.*(?=</span)')
+FIREFOX_ESR_VER=$(get_release organizations | grep -Po 'span class="c-release-version.*">\K.*(?=</span)')
+FIREFOX_BETA_VER=$(curl -sSL $FIREFOX_INSTALLER_URL/firefox/releases/ | grep -Po 'a href="/pub/firefox/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
+FIREFOX_NIGHTLY_VER=$(get_release nightly | grep -Po 'span class="c-release-version.*">\K.*(?=</span)')
+FIREFOX_DEV_VER=$(curl -sSL $FIREFOX_INSTALLER_URL/devedition/releases/ | grep -Po 'a href="/pub/devedition/releases/.*">\K.*(?=</a)' | sort -nr | head -n1 | sed "s|\/||g")
 # Set default firefox versions
 FIREFOX_VER=${FIREFOX_VER:-$FIREFOX_VER}
 FIREFOX_ESR_VER=${FIREFOX_ESR_VER:-$FIREFOX_ESR_VER}
@@ -250,66 +252,133 @@ install_firefox() {
     fi
     if [ "$mode" == "mozilla" ]
     then
-      language=("${lang_array[@]}")
-      read -rp "$(
-            f=0
-            for l in "${language[@]}"
-            do
-                    echo "$((++f)): $l"
-            done
-            echo -ne "Please select a language: "
-      )" selection
-      selected_language="${language[$((selection-1))]}"
-      FIREFOX_LANG=$(echo "$selected_language" | grep -o "lang=.*" | sed "s|lang=||g")
-      language_selected=$(echo "$selected_language" | grep -o ".* lang=" | sed "s|lang=||g")
+      if [ -z $FIREFOX_LANG ]
+        then
+        language=("${lang_array[@]}")
+        read -rp "$(
+              f=0
+              for l in "${language[@]}"
+              do
+                      echo "$((++f)): $l"
+              done
+              echo -ne "Please select a language: "
+        )" selection
+        selected_language="${language[$((selection-1))]}"
+        FIREFOX_LANG=$(echo "$selected_language" | grep -o "lang=.*" | sed "s|lang=||g")
+        language_selected=$(echo "$selected_language" | grep -o ".* lang=" | sed "s|lang=||g")
 
-      echo "You selected $language_selected"
+        echo "You selected $language_selected"
+      fi
 
-      release_version_url=$(curl -sSL "https://download-installer.cdn.mozilla.net/pub/firefox/releases/" \
-      | grep -Po 'a href="/pub/firefox/releases/.*">\K.*(?=</a)' \
-      | grep -v "stub\|shiretoko\|sha1-installers\|partners\|namoroka\|latest*\|granp*\|devpre*\|deerpark\|custom-updates\|cdn_test\|bonecho" \
-      | sort -n \
-      | sed "s|\/||g" \
-      | sed 's/.*/"&"/') # wrap quotes around each line of text
-      # Source: https://www.baeldung.com/linux/bash-wrap-line-quotes  
-      release_version=(${release_version_url[@]})
-      read -rp "$(
-        f=0
-          for l in "${release_version[@]}"
-          do
-            echo "$((++f)): $l"
-          done
-        echo -ne "Please select a release version: "
-      )" selection
-      selected_release_version="${release_version[$((selection-1))]}"
-      FIREFOX_VERSION=$selected_release_version
-      
-      echo "You selected $FIREFOX_VERSION"
-      # Remove double quotes
-      FIREFOX_VERSION="${FIREFOX_VERSION//\"/}"
-      
       if [[ "$release" == "custom" ]]
       then
+        # Skip versions
+        beta="b[0-9]*"
+        rc=".[0-9]rc"
+        esr=".[0-9]esr"
+        # Skip words
+        deleted_words="stub\|shiretoko\|sha1-installers\|partners\|namoroka\|latest*\|granp*\|devpre*\|deerpark\|custom-updates\|cdn_test\|bonecho\|funnelcake\|plugin\|real"
+        case "$FIREFOX_VER_NAME" in
+        firefox)
+          firefox_versions=".[0-9]"
+          deleted_versions="$beta\|$rc\|$esr"
+          firefox_versions_url=$FIREFOX_INSTALLER_URL/firefox/releases
+          src='a href="/pub/firefox/releases/.*">\K.*(?=</a)'
+          ;;
+        firefox-esr)
+          firefox_versions="$esr"
+          deleted_versions="$rc\|$beta"
+          firefox_versions_url=$FIREFOX_INSTALLER_URL/firefox/releases
+          src='a href="/pub/firefox/releases/.*">\K.*(?=</a)'
+          ;;
+        firefox-beta)
+          firefox_versions="$beta"
+          deleted_versions="$rc\|$esr"
+          firefox_versions_url=$FIREFOX_INSTALLER_URL/firefox/releases
+          src='a href="/pub/firefox/releases/.*">\K.*(?=</a)'
+          ;;
+        firefox-nightly)
+          firefox_versions=".[0-9]"
+          deleted_versions="$beta\|$rc\|$esr"
+          firefox_versions_url=$FIREFOX_INSTALLER_URL/firefox/nightly/latest-mozilla-central
+          src='a href="/pub/firefox/nightly/latest-mozilla-central/.*">\K.*(?=</a)'
+        ;;
+        firefox-devedition)
+          firefox_versions=".[0-9]"
+          deleted_versions=""
+          deleted_words=""
+          firefox_versions_url=$FIREFOX_INSTALLER_URL/devedition/releases
+          src='a href="/pub/devedition/releases/.*">\K.*(?=</a)'
+        ;;
+        esac
+        select_firefox_version() {
+          if [ $FIREFOX_VER_NAME == "firefox-nightly" ]
+          then
+            release_version_url=$(curl -sSL "$FIREFOX_INSTALLER_URL/firefox/nightly/latest-mozilla-central/" \
+            | grep -Po 'a href="/pub/firefox/nightly/latest-mozilla-central/.*">\K.*(?=</a)' \
+            | cut -d '.' -f1,2 \
+            | grep "firefox-.*" \
+            | uniq)
+          elif [ $FIREFOX_VER_NAME == "firefox-devedition" ]
+          then
+            release_version_url=$(curl -sSL "$firefox_versions_url/" \
+            | grep -Po "$src" \
+            | grep "$firefox_versions" \
+            | sort -n \
+            | sed "s|\/||g" \
+            | sed 's/.*/"&"/')
+          else
+            release_version_url=$(curl -sSL "$firefox_versions_url/" \
+            | grep -Po "$src" \
+            | grep -v "$deleted_words" \
+            | grep -v "$deleted_versions" \
+            | grep "$firefox_versions" \
+            | sort -n \
+            | sed "s|\/||g" \
+            | sed 's/.*/"&"/') # wrap quotes around each line of text
+            # Source: https://www.baeldung.com/linux/bash-wrap-line-quotes
+          fi
+          release_version=(${release_version_url[@]})
+          read -rp "$(
+            f=0
+              for l in "${release_version[@]}"
+              do
+                echo "$((++f)): $l"
+              done
+            echo -ne "Please select a release version: "
+          )" selection
+          selected_release_version="${release_version[$((selection-1))]}"
+          FIREFOX_VERSION=$selected_release_version
+          
+          echo "You selected $FIREFOX_VERSION"
+          # Remove double quotes
+          FIREFOX_VERSION="${FIREFOX_VERSION//\"/}"
+        }
         case "$FIREFOX_VER_NAME" in
           firefox)
             # firefox
-            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
+            select_firefox_version
+            firefox_url=$firefox_versions_url/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
             ;;
           firefox-esr)
             # esr
-            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/"$FIREFOX_VERSION"esr/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION"esr.tar.xz
+            select_firefox_version
+            firefox_url=$firefox_versions_url/"$FIREFOX_VERSION"esr/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION"esr.tar.xz
             ;;
           firefox-beta)
             # beta
-            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
+            select_firefox_version
+            firefox_url=$firefox_versions_url/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
             ;;
           firefox-nightly)
             # nightly
-            firefox_url=https://download-installer.cdn.mozilla.net/pub/firefox/nightly/latest-mozilla-central/firefox-"$FIREFOX_VERSION"."$FIREFOX_LANG".linux-"$(uname -m)".tar.xz
+            select_firefox_version
+            firefox_url=$firefox_versions_url/firefox-"$FIREFOX_VERSION"."$FIREFOX_LANG".linux-"$(uname -m)".tar.xz
             ;;
           firefox-devedition)
             # Dev
-            firefox_url=https://download-installer.cdn.mozilla.net/pub/devedition/releases/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
+            select_firefox_version
+            firefox_url=$firefox_versions_url/"$FIREFOX_VERSION"/linux-"$(uname -m)"/"$FIREFOX_LANG"/firefox-"$FIREFOX_VERSION".tar.xz
             ;;
         esac
       else
@@ -512,33 +581,33 @@ do
       ;;
     --firefox | -f)
       shift
-      FIREFOX_VERSION='1.0.2'
+      FIREFOX_VERSION="$2"
       FIREFOX_VER_NAME=firefox
       ;;
     --esr | -e)
       shift
-      FIREFOX_VERSION='1.0.2'
+      FIREFOX_VERSION="$2"
       FIREFOX_VER_NAME=firefox-esr
       ;;
     --beta | -b)
       shift
-      FIREFOX_VERSION='1.0.2'
+      FIREFOX_VERSION="$2"
       FIREFOX_VER_NAME=firefox-beta
       ;;
     --nightly | -n)
       shift
-      FIREFOX_VERSION='1.0.2'
+      FIREFOX_VERSION="$2"
       FIREFOX_VER_NAME=firefox-nightly
       ;;
     --devedition | -d)
       shift
-      FIREFOX_VERSION='1.0.2'
+      FIREFOX_VERSION="$2"
       FIREFOX_VER_NAME=firefox-devedition
       ;;
     --release | -rl)
       shift
       release="custom"
-      FIREFOX_VERSION='1.0.2'
+      FIREFOX_VERSION="$2"
       ;;
     --repo | -r)
       shift
