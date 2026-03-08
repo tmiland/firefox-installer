@@ -49,6 +49,65 @@ fi
 # Get script filename
 self=$(readlink -f "${BASH_SOURCE[0]}")
 SCRIPT_FILENAME=$(basename "$self")
+CURRDIR=$(pwd)
+# Icons used for printing
+ARROW='➜'
+DONE='✔'
+ERROR='✗'
+WARNING='⚠'
+# scolors - Color constants
+# canonical source http://github.com/swelljoe/scolors
+
+# do we have tput?
+if which 'tput' > /dev/null; then
+  # do we have a terminal?
+  if [ -t 1 ]; then
+    # does the terminal have colors?
+    ncolors=$(tput colors)
+    if [ "$ncolors" -ge 8 ]; then
+      RED=$(tput setaf 1)
+      GREEN=$(tput setaf 2)
+      YELLOW=$(tput setaf 3)
+      BLUE=$(tput setaf 4)
+      BBLUE=$(tput setaf 153)
+      MAGENTA=$(tput setaf 5)
+      CYAN=$(tput setaf 6)
+      WHITE=$(tput setaf 7)
+      REDBG=$(tput setab 1)
+      GREENBG=$(tput setab 2)
+      YELLOWBG=$(tput setab 3)
+      BLUEBG=$(tput setab 4)
+      MAGENTABG=$(tput setab 5)
+      CYANBG=$(tput setab 6)
+      WHITEBG=$(tput setab 7)
+
+      BOLD=$(tput bold)
+      UNDERLINE=$(tput smul) # Many terminals don't support this
+      NORMAL=$(tput sgr0)
+    fi
+  fi
+else
+  echo "tput not found, colorized output disabled."
+  RED=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+  BBLUE=''
+  MAGENTA=''
+  CYAN=''
+  WHITE=''
+  REDBG=''
+  GREENBG=''
+  YELLOWBG=''
+  BLUEBG=''
+  MAGENTABG=''
+  CYANBG=''
+  WHITEBG=''
+
+  BOLD=''
+  UNDERLINE=''
+  NORMAL=''
+fi
 # Set default keyrings folder
 keyrings=/etc/apt/keyrings
 # Set default firefox version
@@ -236,6 +295,79 @@ install_firefox_repo() {
       Pin: origin packages.mozilla.org
       Pin-Priority: 1000
   ' | sudo tee /etc/apt/preferences.d/mozilla
+}
+
+firefox_sync() {
+  FIREFOX_SYNC_REPO_DIR="$HOME"/.docker/repos
+  if [[ $1 == "install" ]]
+  then
+    if [[ $(command -v 'git') ]]
+    then
+      echo "Cloning firefox-sync from GitHub..."
+      env printf "${YELLOW}${WARNING} Using dev branch from tmiland/firefox-sync${NORMAL}\\n"
+      if ! [ -d $FIREFOX_SYNC_REPO_DIR  ]; then
+        mkdir -p "$FIREFOX_SYNC_REPO_DIR"
+      fi
+      rm -rf "$FIREFOX_SYNC_REPO_DIR"/firefox-sync
+      git clone -b dev https://github.com/tmiland/firefox-sync.git "$FIREFOX_SYNC_REPO_DIR"/firefox-sync
+    else
+      echo "ERROR! Git is not installed. Install with \"apt install git\""
+      exit 0
+    fi
+    cd "$FIREFOX_SYNC_REPO_DIR"/firefox-sync
+    echo "Running script to generate .env file..."
+    "$FIREFOX_SYNC_REPO_DIR"/firefox-sync/prepare_environment.sh
+    echo "Running docker compose..."
+    if [[ $(command -v 'docker') ]]
+    then
+      docker compose up -d
+      if curl -s http://localhost:"$(grep CONTAINER_EXPORT_PORT .env | cut -d'=' -f2)"/__heartbeat__ =~ "Ok" >/dev/null 2>&1
+      then
+        echo " ${GREEN}${DONE}${NORMAL} Installation successful!"
+      else
+        echo "${RED}ERROR! Something went wrong, check the logs for more information..."
+        exit 0
+      fi
+      echo
+      echo "${BLUE}proceed to set up your firefox browser.${NORMAL}"
+      echo
+      echo "${YELLOW}Visit:${NORMAL} https://github.com/porelli/firefox-sync.git#firefox-setup"
+    else
+      echo "ERROR! Docker is not installed"
+      exit 0
+    fi
+  elif [[ $1 == "update" ]]
+  then
+    cd "$FIREFOX_SYNC_REPO_DIR"/firefox-sync || exit 0
+    docker compose pull
+    docker compose up -d
+    docker image prune
+    cd -
+  elif [[ $1 == "logs" ]]
+  then
+    cd "$FIREFOX_SYNC_REPO_DIR"/firefox-sync || exit 0
+    docker compose logs -f
+    cd -
+  elif [[ $1 == "stop" ]]
+  then
+    cd "$FIREFOX_SYNC_REPO_DIR"/firefox-sync || exit 0
+    docker compose down
+    cd -
+  elif [[ $1 == "start" ]]
+  then
+    cd "$FIREFOX_SYNC_REPO_DIR"/firefox-sync || exit 0
+    docker compose up -d
+    cd -
+  elif [[ $1 == "uninstall" ]]
+  then
+    cd "$FIREFOX_SYNC_REPO_DIR"/firefox-sync || exit 0
+    docker compose down -v  # -v removes the persistent database volume
+    cd -
+    rm -rf "$FIREFOX_SYNC_REPO_DIR"/firefox-sync
+  elif [[ $1 == "" ]]
+  then
+    echo "Options are: install, update, logs, start, stop"
+  fi
 }
 
 install_firefox() {
@@ -555,7 +687,8 @@ usage() {
   --nightly              |-n   nightly (${FIREFOX_NIGHTLY_VER})
   --devedition           |-d   devedition (${FIREFOX_DEV_VER})
   --release              |-rl  select custom release to install*
-  --repo                 |-r   install Mozilla APT repo (debian)
+  --repo                 |-r   install Mozilla APT repo (apt)
+  --firefox-sync         |-fs  install firefox-sync (docker)
   --language             |-l   install language pack (apt)
   --apt                  |-a   select apt install mode
   --mozilla-builds       |-m   select mozilla builds install mode
@@ -612,6 +745,10 @@ do
     --repo | -r)
       shift
       install_firefox_repo
+      ;;
+    --firefox-sync | -fs)
+      shift
+      firefox_sync "$@"
       ;;
     --language | -l)
       shift
